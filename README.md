@@ -1,0 +1,1 @@
+# corepack-pkg-manager-cache
