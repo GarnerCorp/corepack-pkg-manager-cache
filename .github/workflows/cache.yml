@@ -1,0 +1,52 @@
+name: Cache
+on:
+  workflow_dispatch:
+    inputs:
+      versioned-package-manager:
+        type: string
+        description: "versioned package manager (e.g. yarn@4.5.3)"
+        required: true
+
+run-name: Cache ${{ inputs.versioned-package-manager }}
+jobs:
+  cache:
+    name: Cache
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - shell: bash
+      env:
+        CACHE_DIRECTORY: .cache/node/corepack/v1
+        VERSIONED_PACKAGE_MANAGER: ${{ inputs.versioned-package-manager }}
+        TRACE: ${{ github.run_attempt > 1 && '1' || '' }}
+        ACTOR: ${{ github.actor }}
+        ACTOR_ID: ${{ github.actor_id }}
+      run: |
+        : Get package manager
+        if [ -n "$TRACE" ]; then
+          set -x
+        fi
+        npm install -g corepack
+        cache_directory=$(
+          cd;
+          mkdir -p "$CACHE_DIRECTORY"
+          cd "$CACHE_DIRECTORY"
+          pwd
+        )
+        package_manager=${VERSIONED_PACKAGE_MANAGER%@*}
+        git checkout --orphan="new"
+        git rm --cached -r .
+        git clean -d -f
+        commit() {
+          git -c user.name="$ACTOR" -c user.email="$ACTOR_ID+$ACTOR@users.noreply.github.com" commit -m "$1"
+        }
+        corepack install -g "$VERSIONED_PACKAGE_MANAGER"
+        rsync -a "$cache_directory"/ .
+        git add .
+        commit "$VERSIONED_PACKAGE_MANAGER"
+        git tag "$VERSIONED_PACKAGE_MANAGER"
+        git push origin "$VERSIONED_PACKAGE_MANAGER"
