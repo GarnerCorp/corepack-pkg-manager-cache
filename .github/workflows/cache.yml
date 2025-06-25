@@ -45,7 +45,7 @@ jobs:
           git -c user.name="$ACTOR" -c user.email="$ACTOR_ID+$ACTOR@users.noreply.github.com" commit -m "$1"
         }
         corepack install -g "$VERSIONED_PACKAGE_MANAGER"
-        rsync -a "$cache_directory"/ .
+        mv "$cache_directory"/* .
         git add .
         commit "$VERSIONED_PACKAGE_MANAGER"
         git tag "$VERSIONED_PACKAGE_MANAGER"
